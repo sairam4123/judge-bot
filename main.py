@@ -764,7 +764,7 @@ async def on_message(message: discord.Message):
 
             print("Response received.")
             reply = response.text.strip()
-            await judge_message.edit(content=reply, allowed_mentions=discord.AllowedMentions.all())
+            await judge_message.edit(content=trim_to_limit(reply, 1950), allowed_mentions=discord.AllowedMentions.all())
         
 
         if "court is adjourned" in reply.lower() or "case is closed" in reply.lower():
