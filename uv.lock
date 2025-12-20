@@ -422,6 +422,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "discord-py" },
     { name = "google-genai" },
+    { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "strip-markdown" },
 ]
@@ -430,6 +431,7 @@ dependencies = [
 requires-dist = [
     { name = "discord-py", git = "https://github.com/Rapptz/discord.py/" },
     { name = "google-genai", specifier = ">=1.54.0" },
+    { name = "pydantic", specifier = ">=2.12.5" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "strip-markdown", specifier = ">=1.3" },
 ]

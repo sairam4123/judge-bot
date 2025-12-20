@@ -13,3 +13,8 @@ wheels/
 cases.json
 courts.json
 attachments/
+
+*.db
+*.sql
+
+*.vscode
