@@ -4,12 +4,57 @@ A Discord roleplay courtroom bot that lets users file cases, attach evidence, an
 
 ## Features
 
-- `/start` to activate the courtroom in a server (adds the "File a Case" button); `/stop` to deactivate.
-- "File a Case" modal with case type (Civil, Criminal, Community, Counter-case, Other), accused users, reason, and optional associated case threads for counter-cases.
-- Each case gets its own thread with persistent storage in `cases.json` and `courts.json`, plus buttons to update or close a case.
-- Context menu commands: **Summarize** (uses Google Gemini to summarize recent logs) and **Attach Evidence** (upload up to two files, auto-summarize, and post a gallery).
-- Slash commands: `/list_cases` to list active cases and `/case_details` to view a specific case.
-- JudgeBot roleplay responses, logging conversations, and keeping running summaries.
+- `/start` and `/stop` to activate/deactivate the courtroom in a server (adds/removes the "File a Case" button)
+- "File a Case" modal: choose case type (Civil, Criminal, Community, Counter-case, Other), accused users, reason, and optionally link associated case threads
+- Each case gets its own thread with persistent storage in `cases.json` and `courts.json`, with buttons to update or close a case
+- Context menu: **Summarize** (uses Google Gemini for log summaries), **Attach Evidence** (upload up to two files, auto-summarize, and post a gallery)
+- Slash commands: `/list_cases` (list active cases), `/case_details` (view a specific case)
+- JudgeBot roleplay responses, conversation logging, and running summaries
+
+## Project Structure
+
+```
+judge-bot/
+├── cases.json
+├── courts.json
+├── data_access.py
+├── db.py
+├── JudgeBot_DB.session.sql
+├── main.py
+├── pyproject.toml
+├── README.md
+├── db/
+├── exts/
+│   ├── cogs.py
+│   └── __pycache__/
+├── judge_bot/
+│   ├── __init__.py
+│   ├── bot.py
+│   ├── db.py
+│   ├── utils.py
+│   ├── genai/
+│   │   ├── __init__.py
+│   │   ├── client.py
+│   │   └── generate.py
+│   └── modules/
+│       └── courts/
+│           ├── commands.py
+│           ├── tools.py
+│           ├── core/
+│           │   ├── __init__.py
+│           │   ├── models.py
+│           │   ├── prompt.py
+│           │   └── repositories.py
+│           └── ui/
+│               ├── __init__.py
+│               ├── attach_evidence.py
+│               ├── case_view.py
+│               ├── close_case.py
+│               ├── evidence_gallery.py
+│               ├── file_case.py
+│               ├── request_evidence_view.py
+│               └── update_case.py
+```
 
 ## Installation (with UV)
 
@@ -44,7 +89,7 @@ Create a `.env` file in the project root with:
 - `DISCORD_TOKEN` — your Discord bot token
 - `GOOGLE_API_KEY` — used for Gemini-based summaries
 
-Ensure the process can write to `cases.json`, `courts.json`, and an `attachments/` directory for uploaded evidence.
+Ensure the process can write to `cases.json`, `courts.json`, and the `attachments/` directory for uploaded evidence.
 
 ## Requirements
 

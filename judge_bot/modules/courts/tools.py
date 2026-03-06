@@ -5,8 +5,12 @@ from judge_bot.modules.courts.ui.case_view import CaseView
 from judge_bot.modules.courts.ui.request_evidence_view import RequestEvidenceView
 from judge_bot.utils import construct_header_message, register_tools, trim_message
 
+import typing as t
 
-async def update_verdict(bot: JudgeBot, case_id: int, verdict: str) -> dict[str, str] | None:
+
+async def update_verdict(
+    bot: JudgeBot, case_id: int, verdict: str
+) -> dict[str, str] | None:
     repo = RepositoryManager(bot)
     case = repo.cases.get_case(case_id)
     print(f"Fetched case for ID {case_id}: {case}")
@@ -31,24 +35,32 @@ async def update_verdict(bot: JudgeBot, case_id: int, verdict: str) -> dict[str,
     og_msg = await thread.fetch_message(case.og_message_id)
     await og_msg.edit(content=trim_message(case_details), view=CaseView())
 
-    return {
-        "status": "success",
-        "message": "Verdict updated and case message edited."
-    }
+    return {"status": "success", "message": "Verdict updated and case message edited."}
 
 
-async def add_witness(bot: JudgeBot, case_id: int, witness_id: int) -> dict[str, str] | None:
+async def add_witness(
+    bot: JudgeBot, case_id: int, witness_id: int
+) -> dict[str, str] | None:
     repo = RepositoryManager(bot)
     case = repo.cases.get_case(case_id)
     if not case:
         return
 
-    repo.participants.add_witness_participant(case_id, witness_id)
+    try:
+        repo.participants.add_witness_participant(case_id, witness_id)
+    except Exception as e:
+        if str(e).startswith(
+            "UNIQUE constraint failed: participants.case_id, participants.user_id"
+        ):
+            return {
+                "status": "error",
+                "message": "This user is already a witness in the case.",
+            }
+        print(f"Error adding witness: {e}")
+        return {"status": "error", "message": f"Failed to add witness to the case. {e}"}
 
-    return {
-        "status": "success",
-        "message": "Witness added to the case."
-    }
+    return {"status": "success", "message": "Witness added to the case."}
+
 
 async def close_case(bot: JudgeBot, case_id: int, reason: str) -> dict[str, str] | None:
     repo = RepositoryManager(bot)
@@ -73,29 +85,28 @@ async def close_case(bot: JudgeBot, case_id: int, reason: str) -> dict[str, str]
     og_msg = await thread.fetch_message(case.og_message_id)
     await og_msg.edit(content=trim_message(case_details), view=CaseView())
 
-    await thread.send("The case has been closed due to the following reason: " + reason + "\nCourt is adjourned!")
+    await thread.send("The case has been closed due to the following reason: " + reason)
     await thread.edit(archived=True, locked=True)
 
-    return {
-        "status": "success",
-        "message": "Case closed and message updated."
-    }
+    return {"status": "success", "message": "Case closed and message updated."}
 
-async def request_evidence(bot: JudgeBot, case_id: int, content: str) -> dict[str, str] | None:
+
+async def request_evidence(
+    bot: JudgeBot, case_id: int, content: str
+) -> dict[str, str] | None:
     repo = RepositoryManager(bot)
     print(f"Requesting evidence for case ID {case_id}")
     case = repo.cases.get_case(case_id)
     if not case:
         return
-    
+
     print(f"Requesting evidence for case ID {case_id} with content: {content}")
     # Fetch the thread associated with the case
     thread = bot.get_channel(case.case_id)
     if not thread or not isinstance(thread, discord.Thread):
         return
     print(f"Fetched thread for case ID {case_id}: {thread}")
-    
-    
+
     await thread.send(f"{content}", view=RequestEvidenceView())
 
     return {
@@ -127,10 +138,38 @@ async def reopen_case(bot: JudgeBot, case_id: int) -> dict[str, str] | None:
 
     await thread.edit(archived=False, locked=False)
 
-    return {
-        "status": "success",
-        "message": "Case reopened and message updated."
-    }
+    return {"status": "success", "message": "Case reopened and message updated."}
+
+
+async def search_case(
+    bot: JudgeBot, query: str
+) -> t.Mapping[str, list[t.Mapping[str, t.Any]] | str]:
+    repo = RepositoryManager(bot)
+    cases = repo.cases.search_cases(query)
+    if not cases:
+        return {
+            "status": "failed",
+            "cases": [],
+            "message": "No cases found matching the query.",
+        }
+
+    case_summaries = []
+    for case in cases:
+        summary = await construct_header_message(bot, case)
+        case_summaries.append(
+            {
+                "case_id": case.case_id,
+                "summary": summary,
+                "status": case.status,
+                "type": case.type,
+                "accuser_id": repo.cases.get_accuser(case.case_id),
+                "accused_ids": repo.cases.get_accused(case.case_id),
+                "witness_ids": repo.cases.get_witnesses(case.case_id),
+            }
+        )
+
+    return {"status": "success", "cases": case_summaries}
+
 
 update_verdict_tool = {
     "name": "update_verdict",
@@ -141,15 +180,15 @@ update_verdict_tool = {
         "properties": {
             "case_id": {
                 "type": "string",
-                "description": "The ID of the case to update."
+                "description": "The ID of the case to update.",
             },
             "verdict": {
                 "type": "string",
-                "description": "The new verdict for the case."
-            }
+                "description": "The new verdict for the case.",
+            },
         },
-        "required": ["case_id", "verdict"]
-    }
+        "required": ["case_id", "verdict"],
+    },
 }
 
 add_witness_tool = {
@@ -161,15 +200,15 @@ add_witness_tool = {
         "properties": {
             "case_id": {
                 "type": "string",
-                "description": "The ID of the case to which the witness will be added."
+                "description": "The ID of the case to which the witness will be added.",
             },
             "witness_id": {
                 "type": "string",
-                "description": "The user ID of the witness to add to the case."
-            }
+                "description": "The user ID of the witness to add to the case.",
+            },
         },
-        "required": ["case_id", "witness_id"]
-    }
+        "required": ["case_id", "witness_id"],
+    },
 }
 
 close_case_tool = {
@@ -181,35 +220,35 @@ close_case_tool = {
         "properties": {
             "case_id": {
                 "type": "string",
-                "description": "The ID of the case to close."
+                "description": "The ID of the case to close.",
             },
             "reason": {
                 "type": "string",
-                "description": "The reason for closing the case."
-            }
+                "description": "The reason for closing the case.",
+            },
         },
-        "required": ["case_id", "reason"]
-    }
+        "required": ["case_id", "reason"],
+    },
 }
 
 request_evidence_tool = {
     "name": "request_evidence",
     "func": request_evidence,
-    "description": "Request evidence from participants in a case.",
+    "description": "Demand evidence from accused/accuser in a case.",
     "parameters": {
         "type": "object",
         "properties": {
             "case_id": {
                 "type": "string",
-                "description": "The ID of the case for which evidence is being requested."
+                "description": "The ID of the case for which evidence is being demanded.",
             },
             "content": {
                 "type": "string",
-                "description": "The content of the evidence request message."
-            }
+                "description": "The content of the evidence demand message.",
+            },
         },
-        "required": ["case_id", "content"]
-    }
+        "required": ["case_id", "content"],
+    },
 }
 
 reopen_case_tool = {
@@ -221,11 +260,36 @@ reopen_case_tool = {
         "properties": {
             "case_id": {
                 "type": "string",
-                "description": "The ID of the case to reopen."
+                "description": "The ID of the case to reopen.",
             }
         },
-        "required": ["case_id"]
-    }
+        "required": ["case_id"],
+    },
 }
 
-tools = register_tools([update_verdict_tool, add_witness_tool, close_case_tool, request_evidence_tool])
+search_case_tool = {
+    "name": "search_case",
+    "func": search_case,
+    "description": "Search for cases matching a query and return their summaries.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "The search query to find matching cases.",
+            }
+        },
+        "required": ["query"],
+    },
+}
+
+tools = register_tools(
+    [
+        update_verdict_tool,
+        add_witness_tool,
+        close_case_tool,
+        request_evidence_tool,
+        search_case_tool,
+        reopen_case_tool,
+    ]
+)
