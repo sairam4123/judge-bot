@@ -30,7 +30,7 @@ class AttachEvidenceModal(discord.ui.Modal, title="Attach Evidence to Case"):
         ),
     )
 
-    async def on_submit(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: discord.Interaction) -> None:
         assert isinstance(self.evidence_document.component, discord.ui.FileUpload)
         assert isinstance(interaction.client, JudgeBot)
         assert isinstance(interaction.message, discord.Message)

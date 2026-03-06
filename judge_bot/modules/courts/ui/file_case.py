@@ -66,11 +66,11 @@ class FileCaseModal(discord.ui.Modal, title="File a Case"):
 
         court = repo.courts.get_court(interaction.channel_id)
         if not court:
-            await interaction.response.send_message(f"The courtroom channel is not set up. Please create it to proceed with the case. You may also use the /start command to create a new courtroom.", ephemeral=True)
+            await interaction.response.send_message("The courtroom channel is not set up. Please create it to proceed with the case. You may also use the /start command to create a new courtroom.", ephemeral=True)
             return
         court_channel = interaction.guild.get_channel(court.channel_id)
         if not court_channel:
-            await interaction.response.send_message(f"The courtroom channel does not exist. Please create it to proceed with the case.", ephemeral=True)
+            await interaction.response.send_message("The courtroom channel does not exist. Please create it to proceed with the case.", ephemeral=True)
             return
         
         assert isinstance(court_channel, discord.TextChannel)
